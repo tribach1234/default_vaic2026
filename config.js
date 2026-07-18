@@ -1,6 +1,6 @@
 window.APP_CONFIG = {
     // Không có dấu / ở cuối.
-    API_BASE_URL: "https://observed-internet-friend-lenders.trycloudflare.com",
+    API_BASE_URL: "https://caution-electronics-clothes-sku.trycloudflare.com",
 
     // Để trống nếu backend không đặt DEMO_API_KEY.
     // Đây là khóa demo hiển thị công khai trong mã frontend, không phải bí mật thực sự.
