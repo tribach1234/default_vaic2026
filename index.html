@@ -400,12 +400,78 @@
     </main>
   </div>
 
+
+  <!-- SCHEDULING MODAL -->
+  <div id="schedule-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="schedule-modal-title">
+    <div class="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+      <div class="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white/95 px-6 py-5 backdrop-blur dark:border-slate-800 dark:bg-slate-900/95">
+        <div>
+          <p class="text-xs font-extrabold uppercase tracking-[.16em] text-blue-600 dark:text-blue-400" data-i18n="scheduleEyebrow">Lịch hẹn demo</p>
+          <h2 id="schedule-modal-title" class="mt-1 text-xl font-extrabold text-slate-950 dark:text-white" data-i18n="scheduleTitle">Đặt lịch với nhà đầu tư</h2>
+          <p id="schedule-investor-name" class="mt-1 text-sm text-slate-500 dark:text-slate-400"></p>
+        </div>
+        <button type="button" onclick="closeScheduleModal()" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:hover:border-rose-800 dark:hover:bg-rose-500/10" aria-label="Close">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6">
+        <div id="schedule-loading" class="flex flex-col items-center justify-center py-12 text-center">
+          <div class="h-12 w-12 animate-spin rounded-full border-4 border-blue-100 border-t-blue-600 dark:border-slate-800 dark:border-t-blue-400"></div>
+          <h3 class="mt-4 text-base font-bold text-slate-950 dark:text-white" data-i18n="scheduleLoading">Đang tìm thời gian phù hợp...</h3>
+          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400" data-i18n="scheduleLoadingDescription">Hệ thống đang đối chiếu lịch mock của hai bên và chọn ngẫu nhiên một khoảng thời gian hợp lệ.</p>
+        </div>
+
+        <div id="schedule-result" class="hidden space-y-5">
+          <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 dark:border-emerald-900/70 dark:bg-emerald-500/[.08]">
+            <div class="flex items-start gap-4">
+              <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
+                <i class="fa-solid fa-calendar-check"></i>
+              </span>
+              <div>
+                <p class="text-xs font-extrabold uppercase tracking-[.14em] text-emerald-700 dark:text-emerald-300" data-i18n="selectedSchedule">Khung giờ được chọn</p>
+                <h3 id="selected-slot-label" class="mt-1 text-lg font-extrabold text-slate-950 dark:text-white"></h3>
+                <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Asia/Ho_Chi_Minh · 60 minutes</p>
+                <a id="schedule-meet-link" href="#" target="_blank" rel="noopener noreferrer" class="mt-3 inline-flex items-center gap-2 text-sm font-bold text-emerald-700 hover:underline dark:text-emerald-300">
+                  <i class="fa-solid fa-video"></i>
+                  <span data-i18n="openMeetLink">Mở Meet link demo</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-extrabold text-slate-950 dark:text-white" data-i18n="availableSchedule">Các khung giờ phù hợp</h3>
+            <div id="schedule-slot-list" class="mt-3 grid gap-3 sm:grid-cols-2"></div>
+          </div>
+
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950/50">
+            <div class="flex items-center gap-2 text-sm font-bold text-slate-950 dark:text-white">
+              <i class="fa-regular fa-envelope text-blue-600 dark:text-blue-400"></i>
+              <span data-i18n="mockReplyTitle">Phản hồi mock của startup</span>
+            </div>
+            <p id="schedule-mock-reply" class="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300"></p>
+          </div>
+
+          <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button type="button" onclick="closeScheduleModal()" class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800" data-i18n="closeSchedule">
+              Đóng
+            </button>
+          </div>
+        </div>
+
+        <div id="schedule-error" class="hidden rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm font-semibold leading-6 text-rose-700 dark:border-rose-900/70 dark:bg-rose-500/[.08] dark:text-rose-200"></div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const API_BASE_URL = String(window.APP_CONFIG?.API_BASE_URL || '').replace(/\/$/, '');
     const DEMO_API_KEY = String(window.APP_CONFIG?.DEMO_API_KEY || '');
     let selectedFile = null;
     let currentLanguage = localStorage.getItem('dealconnect-language') || 'vi';
     let currentPage = 'workspace';
+    let latestMatches = [];
 
     const translations = {
       vi: {
@@ -417,7 +483,7 @@
         heroEyebrow:'Phân tích tài liệu bảo mật', heroTitle:'Biến hồ sơ PDF thành thông tin đầu tư có cấu trúc', heroDescription:'Tải hồ sơ dự án, trích xuất dữ liệu trọng yếu và nhận danh sách nhà đầu tư phù hợp trong một quy trình thống nhất.', metricUpload:'Tải hồ sơ', metricExtract:'Trích xuất dữ liệu', metricMatch:'Đối chiếu quỹ',
         stepOne:'Bước 1', uploadTitle:'Tải hồ sơ nguồn', uploadDescription:'Chọn hồ sơ PDF để hệ thống phân tích thông tin doanh nghiệp, vòng gọi vốn và nhu cầu đầu tư.', pdfLimit:'PDF · Tối đa 10 MB', dropPrimary:'Nhấp để chọn tệp', dropSecondary:' hoặc kéo thả vào đây', dropHint:'Hồ sơ được gửi trực tiếp tới backend riêng của bạn', selectedFile:'Tệp đã chọn', runPipeline:'Bắt đầu phân tích',
         processing:'Đang xử lý', loadingDescription:'Hệ thống đang chuẩn hóa hồ sơ, đối chiếu tiêu chí và xây dựng kết quả đề xuất.', progress:'Tiến độ', analysisComplete:'Phân tích hoàn tất', resultsTitle:'Danh sách nhà đầu tư phù hợp', systemStatus:'Trạng thái hệ thống', frontend:'Frontend', connection:'Kết nối', transport:'Truyền tải', workflowTitle:'Quy trình xử lý', workflowUploadTitle:'Tiếp nhận hồ sơ', workflowUploadText:'Tệp PDF được chuyển qua kết nối bảo mật.', workflowExtractTitle:'Chuẩn hóa dữ liệu', workflowExtractText:'Thông tin chính được chuyển thành cấu trúc có thể phân tích.', workflowMatchTitle:'Xếp hạng phù hợp', workflowMatchText:'Các quỹ được sắp xếp theo mức độ tương thích.',
-        apiNotConfigured:'Chưa cấu hình API URL', backendOnline:'Backend Online', missingApiKey:'Thiếu Gemini API Key', backendOffline:'Backend Offline', serverReturned:'Máy chủ trả về', processingGeneric:'Đang xử lý...', uploadToBackend:'Đang tải PDF lên backend...', analysisFailed:'Phân tích thất bại', jobTimeout:'Tác vụ vượt quá 30 phút. Hãy kiểm tra máy backend.', configAlert:'Hãy cấu hình API_BASE_URL trong file config.js trước.', errorPrefix:'Lỗi', noQualifiedFunds:'Không có quỹ thỏa điều kiện lọc', noResultsMessage:'Không tìm thấy quỹ phù hợp đồng thời theo ngành, vòng gọi vốn và số tiền gọi vốn.', unnamedFund:'Chưa có tên quỹ', focus:'Lĩnh vực', notUpdated:'Chưa cập nhật', compatibility:'Độ tương thích', rationale:'Lý do phù hợp', noReason:'Chưa có lý do', viewEmail:'Xem nội dung email đề xuất', noEmail:'Chưa tạo được nội dung email.', resultCount:'{count} quỹ phù hợp'
+        apiNotConfigured:'Chưa cấu hình API URL', backendOnline:'Backend Online', missingApiKey:'Thiếu Gemini API Key', backendOffline:'Backend Offline', serverReturned:'Máy chủ trả về', processingGeneric:'Đang xử lý...', uploadToBackend:'Đang tải PDF lên backend...', analysisFailed:'Phân tích thất bại', jobTimeout:'Tác vụ vượt quá 30 phút. Hãy kiểm tra máy backend.', configAlert:'Hãy cấu hình API_BASE_URL trong file config.js trước.', errorPrefix:'Lỗi', noQualifiedFunds:'Không có quỹ thỏa điều kiện lọc', noResultsMessage:'Không tìm thấy quỹ phù hợp đồng thời theo ngành, vòng gọi vốn và số tiền gọi vốn.', unnamedFund:'Chưa có tên quỹ', focus:'Lĩnh vực', notUpdated:'Chưa cập nhật', compatibility:'Độ tương thích', rationale:'Lý do phù hợp', noReason:'Chưa có lý do', viewEmail:'Xem nội dung email đề xuất', noEmail:'Chưa tạo được nội dung email.', resultCount:'{count} quỹ phù hợp', scheduleMeeting:'Đặt lịch với quỹ', scheduleEyebrow:'Lịch hẹn demo', scheduleTitle:'Đặt lịch với nhà đầu tư', scheduleLoading:'Đang tìm thời gian phù hợp...', scheduleLoadingDescription:'Hệ thống đang đối chiếu lịch mock của hai bên và chọn ngẫu nhiên một khoảng thời gian hợp lệ.', selectedSchedule:'Khung giờ được chọn', availableSchedule:'Các khung giờ phù hợp', mockReplyTitle:'Phản hồi mock của startup', openMeetLink:'Mở Meet link demo', closeSchedule:'Đóng', scheduleFailed:'Không thể tạo lịch hẹn'
       },
       en: {
         brandSubtitle:'Capital discovery workspace', workspace:'Workspace', navDocumentIntelligence:'Document Intelligence', navAboutUs:'About Us', localProcessing:'Local processing enabled', privacyNote:'Documents are processed through your private backend connection.', pageTitle:'Investment Document Intelligence', aboutPageTitle:'Meet the Deal Connect Team',
@@ -428,7 +494,7 @@
         heroEyebrow:'Secure document intelligence', heroTitle:'Turn PDF pitch decks into structured investment intelligence', heroDescription:'Upload a company profile, extract critical fundraising data, and receive a ranked investor shortlist in one streamlined workflow.', metricUpload:'Upload document', metricExtract:'Extract data', metricMatch:'Rank investors',
         stepOne:'Step 1', uploadTitle:'Upload source document', uploadDescription:'Select a PDF for analysis of company profile, funding stage, and capital requirements.', pdfLimit:'PDF · Up to 10 MB', dropPrimary:'Click to choose a file', dropSecondary:' or drag and drop it here', dropHint:'Your document is sent directly to your private backend', selectedFile:'Selected file', runPipeline:'Start analysis',
         processing:'Processing', loadingDescription:'The system is normalizing the document, evaluating criteria, and preparing ranked recommendations.', progress:'Progress', analysisComplete:'Analysis complete', resultsTitle:'Recommended investors', systemStatus:'System status', frontend:'Frontend', connection:'Connection', transport:'Transport', workflowTitle:'Processing workflow', workflowUploadTitle:'Receive document', workflowUploadText:'The PDF is transferred through a secure connection.', workflowExtractTitle:'Normalize data', workflowExtractText:'Key information is transformed into an analysis-ready structure.', workflowMatchTitle:'Rank compatibility', workflowMatchText:'Investors are ranked by overall fit.',
-        apiNotConfigured:'API URL not configured', backendOnline:'Backend Online', missingApiKey:'Gemini API key missing', backendOffline:'Backend Offline', serverReturned:'Server returned', processingGeneric:'Processing...', uploadToBackend:'Uploading PDF to backend...', analysisFailed:'Analysis failed', jobTimeout:'The task exceeded 30 minutes. Please check the backend machine.', configAlert:'Configure API_BASE_URL in config.js first.', errorPrefix:'Error', noQualifiedFunds:'No investors passed all filters', noResultsMessage:'No investor matched the industry, funding stage, and fundraising amount at the same time.', unnamedFund:'Unnamed investor', focus:'Focus', notUpdated:'Not available', compatibility:'Compatibility', rationale:'Match rationale', noReason:'No rationale available', viewEmail:'View suggested outreach email', noEmail:'No email content was generated.', resultCount:'{count} matching investors'
+        apiNotConfigured:'API URL not configured', backendOnline:'Backend Online', missingApiKey:'Gemini API key missing', backendOffline:'Backend Offline', serverReturned:'Server returned', processingGeneric:'Processing...', uploadToBackend:'Uploading PDF to backend...', analysisFailed:'Analysis failed', jobTimeout:'The task exceeded 30 minutes. Please check the backend machine.', configAlert:'Configure API_BASE_URL in config.js first.', errorPrefix:'Error', noQualifiedFunds:'No investors passed all filters', noResultsMessage:'No investor matched the industry, funding stage, and fundraising amount at the same time.', unnamedFund:'Unnamed investor', focus:'Focus', notUpdated:'Not available', compatibility:'Compatibility', rationale:'Match rationale', noReason:'No rationale available', viewEmail:'View suggested outreach email', noEmail:'No email content was generated.', resultCount:'{count} matching investors', scheduleMeeting:'Schedule meeting', scheduleEyebrow:'Demo scheduling', scheduleTitle:'Schedule with investor', scheduleLoading:'Finding a suitable time...', scheduleLoadingDescription:'The system is comparing both mock calendars and randomly selecting one valid slot.', selectedSchedule:'Selected time slot', availableSchedule:'Suitable time slots', mockReplyTitle:'Mock startup reply', openMeetLink:'Open demo Meet link', closeSchedule:'Close', scheduleFailed:'Unable to create meeting schedule'
       }
     };
 
@@ -616,6 +682,8 @@
     }
 
     function renderResults(data) {
+      latestMatches = Array.isArray(data) ? data : [];
+      data = latestMatches;
       document.querySelector('[data-count-text]').innerText = data.length ? t('resultCount',{count:data.length}) : t('noQualifiedFunds');
       const listContainer = document.getElementById('investor-list');
       listContainer.innerHTML = '';
@@ -653,10 +721,103 @@
                 <summary class="flex cursor-pointer list-none items-center justify-between gap-4 bg-slate-50 px-4 py-3.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:bg-slate-950/60 dark:text-slate-200 dark:hover:bg-slate-800"><span class="flex items-center gap-2"><i class="fa-regular fa-envelope text-slate-500"></i>${escapeHTML(t('viewEmail'))}</span><i class="fa-solid fa-chevron-down text-xs text-slate-400 transition group-open:rotate-180"></i></summary>
                 <div class="whitespace-pre-wrap bg-slate-950 p-5 font-mono text-sm leading-7 text-emerald-300">${escapeHTML(item.generated_email || t('noEmail'))}</div>
               </details>
+              <div class="mt-4 flex justify-end">
+                <button type="button" onclick="scheduleInvestor(${index})" class="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 transition hover:-translate-y-0.5 hover:from-violet-700 hover:to-indigo-700">
+                  <i class="fa-regular fa-calendar-check"></i>
+                  <span>${escapeHTML(t('scheduleMeeting'))}</span>
+                </button>
+              </div>
             </div>
           </article>`;
         listContainer.insertAdjacentHTML('beforeend', cardHTML);
       });
+    }
+
+    function openScheduleModal(investorName) {
+      const modal = document.getElementById('schedule-modal');
+      document.getElementById('schedule-investor-name').textContent = investorName || '';
+      document.getElementById('schedule-loading').classList.remove('hidden');
+      document.getElementById('schedule-result').classList.add('hidden');
+      document.getElementById('schedule-error').classList.add('hidden');
+      document.getElementById('schedule-error').textContent = '';
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.body.classList.add('overflow-hidden');
+    }
+
+    function closeScheduleModal() {
+      const modal = document.getElementById('schedule-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+      document.body.classList.remove('overflow-hidden');
+    }
+
+    function renderScheduleResult(schedule) {
+      document.getElementById('schedule-loading').classList.add('hidden');
+      document.getElementById('schedule-error').classList.add('hidden');
+      document.getElementById('schedule-result').classList.remove('hidden');
+
+      document.getElementById('selected-slot-label').textContent =
+        schedule.selected_slot?.label || '';
+
+      const meetLink = document.getElementById('schedule-meet-link');
+      meetLink.href = schedule.meet_link || '#';
+
+      document.getElementById('schedule-mock-reply').textContent =
+        schedule.mock_startup_reply || '';
+
+      const slotList = document.getElementById('schedule-slot-list');
+      slotList.innerHTML = '';
+
+      (schedule.available_slots || []).forEach((slot, index) => {
+        const isSelected =
+          slot.start_time_iso === schedule.selected_slot?.start_time_iso &&
+          slot.end_time_iso === schedule.selected_slot?.end_time_iso;
+
+        slotList.insertAdjacentHTML('beforeend', `
+          <div class="rounded-2xl border p-4 ${
+            isSelected
+              ? 'border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-500/[.08]'
+              : 'border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900'
+          }">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <div class="text-sm font-extrabold text-slate-950 dark:text-white">${escapeHTML(slot.start_time || '')} - ${escapeHTML(slot.end_time || '')}</div>
+                <div class="mt-1 text-xs text-slate-500 dark:text-slate-400">${escapeHTML(slot.date || '')}</div>
+              </div>
+              ${isSelected ? '<i class="fa-solid fa-circle-check text-emerald-500"></i>' : '<i class="fa-regular fa-clock text-slate-400"></i>'}
+            </div>
+          </div>
+        `);
+      });
+    }
+
+    async function scheduleInvestor(index) {
+      const match = latestMatches[index];
+      const investor = match?.investor;
+
+      if (!investor) {
+        alert(`${t('errorPrefix')}: ${t('scheduleFailed')}`);
+        return;
+      }
+
+      openScheduleModal(investor.name || t('unnamedFund'));
+
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/calendar/schedule`, {
+          method: 'POST',
+          headers: apiHeaders({ 'Content-Type': 'application/json' }),
+          body: JSON.stringify({ investor })
+        });
+        const schedule = await parseJsonResponse(response);
+        renderScheduleResult(schedule);
+      } catch (error) {
+        console.error(error);
+        document.getElementById('schedule-loading').classList.add('hidden');
+        const errorBox = document.getElementById('schedule-error');
+        errorBox.classList.remove('hidden');
+        errorBox.textContent = `${t('scheduleFailed')}: ${error.message}`;
+      }
     }
 
     function setupDragAndDrop() {
@@ -671,6 +832,13 @@
         handleFileUpload(input);
       });
     }
+
+    document.getElementById('schedule-modal').addEventListener('click', event => {
+      if (event.target.id === 'schedule-modal') closeScheduleModal();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') closeScheduleModal();
+    });
 
     setLanguage(currentLanguage);
     updateThemeIcon();
